@@ -175,6 +175,11 @@ h3 {
   color: var(--forest);
 }
 
+.compact-empty {
+  min-height: 88px;
+  padding: 14px;
+}
+
 .api-help {
   margin: -4px 0 14px;
   border-radius: var(--radius-md);
@@ -288,6 +293,77 @@ textarea {
   inset: 0;
   opacity: 0;
   cursor: pointer;
+}
+
+.source-file-list {
+  display: grid;
+  gap: 10px;
+}
+
+.source-file-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(21, 37, 31, 0.08);
+}
+
+.source-file-head {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.source-file-name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--forest);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.source-file-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(33, 68, 56, 0.08);
+  color: var(--forest);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.source-badge.warning {
+  background: rgba(161, 76, 31, 0.1);
+  color: var(--accent-strong);
+}
+
+.source-remove-btn {
+  min-width: 72px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--accent-strong);
+  border: 1px solid rgba(161, 76, 31, 0.16);
+  box-shadow: none;
+}
+
+.source-file-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
 }
 
 .button-row {

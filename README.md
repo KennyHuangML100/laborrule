@@ -1,20 +1,21 @@
 # 勞基法 RAG 問答
 
-這是一個純前端的 RAG 問答頁面，回答範圍以同目錄的 `lobrul.txt` 為主，並讓使用者自行輸入 Gemini API Key。
+這是一個純前端的 RAG 問答頁面，會先載入同目錄的 `lobrul.txt` 作為內建法條，也可再上傳自己的參考資料，並讓使用者自行輸入 Gemini API Key。
 
 ## 功能
 
-- 以 `lobrul.txt` 解析出勞基法條文。
-- 使用 Gemini embeddings 建立條文索引。
-- 提問時先檢索相關條文，再把條文送給 Gemini 產生答案。
-- 顯示本次主要來源條文。
-- 將 embeddings 快取在瀏覽器本機，避免每次重建。
+- 自動載入 `lobrul.txt`，也可額外上傳 `txt`、`md`、`pdf`、`doc`、`docx`。
+- 依資料類型做解析、切塊與索引。
+- 使用 Gemini embeddings 建立向量索引，並搭配詞彙分數做混合檢索。
+- 提問時先檢索最相關片段，再把片段送給 Gemini 產生答案。
+- 顯示本次主要來源片段與已載入檔名。
+- 將 embeddings 快取在瀏覽器 IndexedDB，避免每次重建。
 
 ## 使用方式
 
 1. 直接開啟 `index.html`。
-2. 若頁面無法自動載入 `lobrul.txt`，手動選擇同目錄的 `lobrul.txt`。
-3. 輸入 Gemini API Key。
+2. 輸入 Gemini API Key，必要時可先按 `驗證 API Key`。
+3. 視需要上傳自己的參考資料。
 4. 按 `建立 / 更新索引`，或直接提問讓頁面自動建立索引。
 
 ## 建議
@@ -66,11 +67,12 @@ npx wrangler pages deploy .
 
 ### 這個專案在 Cloudflare 上的運作方式
 
-- Cloudflare 只負責託管靜態頁面與 `lobrul.txt`。
+- Cloudflare 只負責託管靜態頁面與內建的 `lobrul.txt`。
 - Gemini API Key 由使用者在頁面上自行輸入。
 - Gemini API 請求會由使用者瀏覽器直接送到 Google，不需要在 Cloudflare 上保存你的 Gemini 金鑰。
 
 ## 注意
 
-- 回答只以目前檢索到的 `lobrul.txt` 條文為主。
+- 回答只以目前檢索到的參考資料片段為主。
+- 舊版 `.doc` 會以瀏覽器相容模式抽取文字，效果通常不如 `txt`、`md`、`pdf`、`docx` 穩定。
 - 這不是正式法律意見；如果要做實務判斷，仍需再核對完整法規與主管機關解釋。

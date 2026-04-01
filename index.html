@@ -30,7 +30,7 @@
         <aside class="panel controls-panel">
           <div class="panel-head">
             <h2>設定</h2>
-            <p>輸入 API Key、載入條文、建立索引。</p>
+            <p>輸入 API Key、上傳參考資料、建立索引。</p>
           </div>
 
           <label class="field">
@@ -73,14 +73,27 @@
           </label>
 
           <div class="field">
-            <span>條文來源</span>
+            <span>參考資料</span>
             <label class="file-picker">
-              <input id="corpusFileInput" type="file" accept=".txt,text/plain" />
-              <span>手動選擇 lobrul.txt</span>
+              <input
+                id="corpusFileInput"
+                type="file"
+                accept=".txt,.md,.pdf,.doc,.docx,text/plain,text/markdown,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                multiple
+              />
+              <span>上傳你的參考資料</span>
             </label>
             <p class="field-hint">
-              會先嘗試自動讀取同目錄的 <code>lobrul.txt</code>；若你是直接雙擊開啟頁面，可改用手動選檔。
+              支援 <code>txt</code>、<code>md</code>、<code>pdf</code>、<code>doc</code> 與
+              <code>docx</code>。系統會自動解析內容並建立 RAG 索引。
             </p>
+          </div>
+
+          <div class="field">
+            <span>已載入資料</span>
+            <div id="sourceFileList" class="source-file-list empty-state compact-empty">
+              尚未載入參考資料。
+            </div>
           </div>
 
           <div class="button-row">
@@ -90,9 +103,9 @@
 
           <div class="status-stack" aria-live="polite">
             <article class="status-card">
-              <span class="status-label">條文</span>
+              <span class="status-label">資料</span>
               <strong id="corpusStatusText">尚未載入</strong>
-              <p id="corpusMetaText" class="status-meta">等待載入 lobrul.txt。</p>
+              <p id="corpusMetaText" class="status-meta">等待載入內建法條或使用者參考資料。</p>
             </article>
             <article class="status-card">
               <span class="status-label">索引</span>
@@ -147,7 +160,7 @@
 
           <div class="answers-head">
             <h3>回答紀錄</h3>
-            <p>每次回答都會附上目前檢索到的主要條文。</p>
+            <p>每次回答都會附上目前檢索到的主要來源片段。</p>
           </div>
           <div id="answerHistory" class="answer-history empty-state">
             尚未有回答。先輸入 API Key，建立索引後再提問。
@@ -156,10 +169,10 @@
 
         <aside class="panel sources-panel">
           <div class="panel-head">
-            <h2>本次來源條文</h2>
-            <p>顯示目前檢索分數最高的條文片段。</p>
+            <h2>本次來源片段</h2>
+            <p>顯示目前檢索分數最高的參考片段。</p>
           </div>
-          <div id="sourceList" class="source-list empty-state">送出問題後會顯示來源條文。</div>
+          <div id="sourceList" class="source-list empty-state">送出問題後會顯示來源片段。</div>
         </aside>
       </section>
     </main>
