@@ -175,6 +175,30 @@ h3 {
   color: var(--forest);
 }
 
+.api-help {
+  margin: -4px 0 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(33, 68, 56, 0.09);
+}
+
+.api-help a {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.steps-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.steps-list li + li {
+  margin-top: 4px;
+}
+
 input[type="password"],
 textarea {
   width: 100%;
@@ -244,6 +268,10 @@ textarea {
   flex-wrap: wrap;
 }
 
+.button-row-tight {
+  margin-bottom: 8px;
+}
+
 button {
   border: none;
   border-radius: 999px;
@@ -274,6 +302,26 @@ button.ghost,
   background: rgba(255, 255, 255, 0.64);
   color: var(--forest);
   border: 1px solid rgba(33, 68, 56, 0.12);
+}
+
+.verify-message {
+  margin: 0 0 18px;
+  min-height: 24px;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.verify-message.loading {
+  color: var(--accent);
+}
+
+.verify-message.success {
+  color: #1f7a43;
+}
+
+.verify-message.error {
+  color: #a1341f;
 }
 
 .status-stack {

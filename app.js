@@ -2,6 +2,7 @@ const GENERATE_MODEL = "gemini-2.5-flash";
 const EMBEDDING_MODEL = "models/gemini-embedding-001";
 const EMBEDDING_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001";
 const GENERATE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GENERATE_MODEL}:generateContent`;
+const MODELS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const EMBEDDING_DIMENSIONALITY = 768;
 const EMBEDDING_BATCH_SIZE = 12;
 const TOP_K = 6;
@@ -34,10 +35,13 @@ const state = {
   history: [],
   isIndexing: false,
   isAnswering: false,
+  isVerifyingKey: false,
 };
 
 const elements = {
   apiKeyInput: document.getElementById("apiKeyInput"),
+  verifyApiKeyBtn: document.getElementById("verifyApiKeyBtn"),
+  apiKeyVerifyText: document.getElementById("apiKeyVerifyText"),
   rememberKeyInput: document.getElementById("rememberKeyInput"),
   corpusFileInput: document.getElementById("corpusFileInput"),
   buildIndexBtn: document.getElementById("buildIndexBtn"),
@@ -63,6 +67,7 @@ init().catch((error) => {
 
 async function init() {
   restorePreferences();
+  setApiKeyVerification("idle", state.apiKey ? "尚未驗證" : "請先輸入 API Key");
   bindEvents();
   renderHistory();
   renderSources([]);
@@ -74,10 +79,20 @@ function bindEvents() {
   elements.apiKeyInput.addEventListener("input", (event) => {
     state.apiKey = event.target.value.trim();
     persistPreferences();
+    setApiKeyVerification("idle", state.apiKey ? "尚未驗證" : "請先輸入 API Key");
     if (!state.apiKey && !hasEmbeddings()) {
       setIndexStatus("尚未建立", "需要 API Key 才能產生 Gemini embeddings。");
     }
     updateButtons();
+  });
+
+  elements.verifyApiKeyBtn.addEventListener("click", async () => {
+    try {
+      await verifyApiKey();
+    } catch (error) {
+      setApiKeyVerification("error", getErrorMessage(error));
+      console.error(error);
+    }
   });
 
   elements.rememberKeyInput.addEventListener("change", (event) => {
@@ -179,6 +194,32 @@ async function loadBundledCorpus() {
       "無法自動讀取 lobrul.txt。若你是直接開啟 HTML，請改用上方的手動選檔。"
     );
     console.warn(error);
+  }
+}
+
+async function verifyApiKey() {
+  if (!state.apiKey) {
+    throw new Error("請先輸入 Gemini API Key。");
+  }
+
+  state.isVerifyingKey = true;
+  setApiKeyVerification("loading", "驗證中...");
+  updateButtons();
+
+  try {
+    const response = await fetch(`${MODELS_ENDPOINT}?key=${encodeURIComponent(state.apiKey)}&pageSize=1`, {
+      method: "GET",
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(payload.error?.message || `API Key 驗證失敗 (${response.status})`);
+    }
+
+    setApiKeyVerification("success", "success");
+  } finally {
+    state.isVerifyingKey = false;
+    updateButtons();
   }
 }
 
@@ -718,12 +759,21 @@ function setAnswerStatus(title, meta) {
   elements.answerMetaText.textContent = meta;
 }
 
+function setApiKeyVerification(status, message) {
+  elements.apiKeyVerifyText.textContent = message;
+  elements.apiKeyVerifyText.className = `verify-message ${status}`;
+}
+
 function updateButtons() {
-  elements.buildIndexBtn.disabled = state.isIndexing || state.isAnswering || !state.corpusText || !state.apiKey;
-  elements.resetIndexBtn.disabled = state.isIndexing || state.isAnswering || !state.corpusText;
-  elements.askBtn.disabled = state.isIndexing || state.isAnswering || !state.corpusText || !state.apiKey;
+  elements.verifyApiKeyBtn.disabled = state.isIndexing || state.isAnswering || state.isVerifyingKey || !state.apiKey;
+  elements.buildIndexBtn.disabled =
+    state.isIndexing || state.isAnswering || state.isVerifyingKey || !state.corpusText || !state.apiKey;
+  elements.resetIndexBtn.disabled = state.isIndexing || state.isAnswering || state.isVerifyingKey || !state.corpusText;
+  elements.askBtn.disabled =
+    state.isIndexing || state.isAnswering || state.isVerifyingKey || !state.corpusText || !state.apiKey;
   elements.askBtn.textContent = state.isAnswering ? "回答中..." : "送出問題";
   elements.buildIndexBtn.textContent = state.isIndexing ? "建立中..." : "建立 / 更新索引";
+  elements.verifyApiKeyBtn.textContent = state.isVerifyingKey ? "驗證中..." : "驗證 API Key";
 }
 
 function getErrorMessage(error) {
