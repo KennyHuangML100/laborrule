@@ -14,8 +14,8 @@ const EMBEDDING_BATCH_SIZE = 12;
 const TOP_K = 8;
 const CONTEXT_SOURCE_COUNT = 5;
 const CONTEXT_MAX_CHARS = 900;
-const CHUNK_MAX_CHARS = 1100;
-const CHUNK_OVERLAP_CHARS = 180;
+const CHUNK_MAX_CHARS = 1800;
+const CHUNK_OVERLAP_CHARS = 120;
 const MIN_UNIT_CHARS = 90;
 const CACHE_VERSION = 2;
 
@@ -1159,24 +1159,13 @@ async function ensureEmbeddings(forceRebuild = false) {
     const pendingChunks = state.chunks.filter((chunk) => !Array.isArray(chunk.embedding));
     for (let start = 0; start < pendingChunks.length; start += EMBEDDING_BATCH_SIZE) {
       const batch = pendingChunks.slice(start, start + EMBEDDING_BATCH_SIZE);
-      const response = await geminiRequest(`${EMBEDDING_ENDPOINT}:batchEmbedContents`, {
-        requests: batch.map((chunk) => ({
-          model: EMBEDDING_MODEL,
-          task_type: "RETRIEVAL_DOCUMENT",
-          output_dimensionality: EMBEDDING_DIMENSIONALITY,
-          content: {
-            parts: [{ text: chunk.retrievalText }],
-          },
-        })),
-      });
-
-      const embeddings = response.embeddings || [];
+      const embeddings = await embedDocumentBatch(batch);
       if (embeddings.length !== batch.length) {
         throw new Error("Gemini embeddings 回傳筆數與 chunk 數量不一致。");
       }
 
       batch.forEach((chunk, index) => {
-        chunk.embedding = embeddings[index]?.values || null;
+        chunk.embedding = embeddings[index];
       });
 
       setIndexStatus(
@@ -1310,8 +1299,8 @@ async function retrieveChunks(question) {
 async function embedQuery(question) {
   const response = await geminiRequest(`${EMBEDDING_ENDPOINT}:embedContent`, {
     model: EMBEDDING_MODEL,
-    task_type: "RETRIEVAL_QUERY",
-    output_dimensionality: EMBEDDING_DIMENSIONALITY,
+    taskType: "RETRIEVAL_QUERY",
+    outputDimensionality: EMBEDDING_DIMENSIONALITY,
     content: {
       parts: [{ text: question }],
     },
@@ -1323,6 +1312,54 @@ async function embedQuery(question) {
   }
 
   return queryEmbedding;
+}
+
+async function embedDocumentBatch(chunks) {
+  try {
+    const response = await geminiRequest(`${EMBEDDING_ENDPOINT}:batchEmbedContents`, {
+      requests: chunks.map((chunk) => ({
+        model: EMBEDDING_MODEL,
+        taskType: "RETRIEVAL_DOCUMENT",
+        title: [chunk.sourceName, chunk.heading].filter(Boolean).join(" · "),
+        outputDimensionality: EMBEDDING_DIMENSIONALITY,
+        content: {
+          parts: [{ text: chunk.retrievalText }],
+        },
+      })),
+    });
+
+    return (response.embeddings || []).map((embedding) => embedding?.values || null);
+  } catch (error) {
+    if (isRateLimitError(error)) {
+      throw error;
+    }
+    console.warn("batchEmbedContents failed, falling back to embedContent", error);
+    return embedDocumentBatchIndividually(chunks);
+  }
+}
+
+async function embedDocumentBatchIndividually(chunks) {
+  const embeddings = [];
+
+  for (const chunk of chunks) {
+    const response = await geminiRequest(`${EMBEDDING_ENDPOINT}:embedContent`, {
+      model: EMBEDDING_MODEL,
+      taskType: "RETRIEVAL_DOCUMENT",
+      title: [chunk.sourceName, chunk.heading].filter(Boolean).join(" · "),
+      outputDimensionality: EMBEDDING_DIMENSIONALITY,
+      content: {
+        parts: [{ text: chunk.retrievalText }],
+      },
+    });
+
+    const values = response.embedding?.values || response.embeddings?.[0]?.values;
+    if (!Array.isArray(values)) {
+      throw new Error("單筆 embedding 回傳格式不正確。");
+    }
+    embeddings.push(values);
+  }
+
+  return embeddings;
 }
 
 function computeBm25Score(queryTokens, chunk) {
@@ -1431,20 +1468,31 @@ async function geminiRequest(url, body) {
     throw new Error("請先輸入 Gemini API Key。");
   }
 
-  const response = await fetch(`${url}?key=${encodeURIComponent(apiKey)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const maxAttempts = 4;
 
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload.error?.message || `Gemini API 請求失敗 (${response.status})`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await fetch(`${url}?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      return payload;
+    }
+
+    const error = buildGeminiError(payload, response);
+    if (attempt < maxAttempts && shouldRetryGeminiRequest(error)) {
+      const retryDelayMs = getRetryDelayMs(error, attempt);
+      await sleep(retryDelayMs);
+      continue;
+    }
+
+    throw error;
   }
-
-  return payload;
 }
 
 function extractResponseText(response) {
@@ -1667,6 +1715,58 @@ function updateButtons() {
 
 function getErrorMessage(error) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function buildGeminiError(payload, response) {
+  const message = payload.error?.message || `Gemini API 請求失敗 (${response.status})`;
+  const error = new Error(message);
+  error.status = response.status;
+  error.retryAfterMs = parseRetryAfterMs(response, message);
+  return error;
+}
+
+function shouldRetryGeminiRequest(error) {
+  return isRateLimitError(error) || isTransientServerError(error);
+}
+
+function isRateLimitError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return error?.status === 429 || message.includes("quota exceeded") || message.includes("rate limit");
+}
+
+function isTransientServerError(error) {
+  return typeof error?.status === "number" && error.status >= 500;
+}
+
+function parseRetryAfterMs(response, message) {
+  const headerValue = response.headers.get("retry-after");
+  if (headerValue) {
+    const headerSeconds = Number(headerValue);
+    if (!Number.isNaN(headerSeconds)) {
+      return Math.max(1000, Math.ceil(headerSeconds * 1000));
+    }
+  }
+
+  const match = String(message).match(/retry in\s+([\d.]+)s/i);
+  if (match) {
+    return Math.max(1000, Math.ceil(Number(match[1]) * 1000) + 1000);
+  }
+
+  return null;
+}
+
+function getRetryDelayMs(error, attempt) {
+  if (error.retryAfterMs) {
+    return error.retryAfterMs;
+  }
+
+  return Math.min(15000, 1000 * 2 ** (attempt - 1));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 async function loadPdfJs() {
