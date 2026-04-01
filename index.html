@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>勞基法 RAG 問答</title>
+    <meta
+      name="description"
+      content="以 lobrul.txt 為主要知識來源的勞動基準法 RAG 問答頁面。"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <main class="app-shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Taiwan Labor Standards Act</p>
+          <h1>勞基法 RAG 問答</h1>
+          <p class="hero-text">
+            回答以 <code>lobrul.txt</code> 為主，先檢索條文，再交由 Gemini 整理成可讀答案。
+          </p>
+        </div>
+        <div class="hero-note">
+          <p>回答僅供條文查詢與理解參考，不構成正式法律意見。</p>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel controls-panel">
+          <div class="panel-head">
+            <h2>設定</h2>
+            <p>輸入 API Key、載入條文、建立索引。</p>
+          </div>
+
+          <label class="field">
+            <span>Gemini API Key</span>
+            <input
+              id="apiKeyInput"
+              type="password"
+              placeholder="貼上你的 Gemini API Key"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+
+          <label class="checkbox-row">
+            <input id="rememberKeyInput" type="checkbox" />
+            <span>記住在這個瀏覽器</span>
+          </label>
+
+          <div class="field">
+            <span>條文來源</span>
+            <label class="file-picker">
+              <input id="corpusFileInput" type="file" accept=".txt,text/plain" />
+              <span>手動選擇 lobrul.txt</span>
+            </label>
+            <p class="field-hint">
+              會先嘗試自動讀取同目錄的 <code>lobrul.txt</code>；若你是直接雙擊開啟頁面，可改用手動選檔。
+            </p>
+          </div>
+
+          <div class="button-row">
+            <button id="buildIndexBtn" class="primary" type="button">建立 / 更新索引</button>
+            <button id="resetIndexBtn" class="ghost" type="button">清除快取</button>
+          </div>
+
+          <div class="status-stack" aria-live="polite">
+            <article class="status-card">
+              <span class="status-label">條文</span>
+              <strong id="corpusStatusText">尚未載入</strong>
+              <p id="corpusMetaText" class="status-meta">等待載入 lobrul.txt。</p>
+            </article>
+            <article class="status-card">
+              <span class="status-label">索引</span>
+              <strong id="indexStatusText">尚未建立</strong>
+              <p id="indexMetaText" class="status-meta">需要 API Key 才能產生 Gemini embeddings。</p>
+            </article>
+            <article class="status-card">
+              <span class="status-label">回答</span>
+              <strong id="answerStatusText">待命中</strong>
+              <p id="answerMetaText" class="status-meta">先建立索引，再送出問題。</p>
+            </article>
+          </div>
+
+          <div class="samples">
+            <p class="samples-title">可直接試問</p>
+            <div class="chip-list">
+              <button class="sample-chip" type="button" data-question="試用期間是否可以不給資遣費？">
+                試用期間與資遣費
+              </button>
+              <button class="sample-chip" type="button" data-question="加班費應該怎麼算？">
+                加班費怎麼算
+              </button>
+              <button class="sample-chip" type="button" data-question="雇主要資遣員工時，預告期間是幾天？">
+                資遣預告期間
+              </button>
+              <button class="sample-chip" type="button" data-question="勞工每七天至少要有幾天休息？">
+                例假與休息日
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel qa-panel">
+          <div class="panel-head">
+            <h2>提問</h2>
+            <p>問題會先做檢索，再將最相關的條文送給 Gemini。</p>
+          </div>
+
+          <form id="askForm" class="ask-form">
+            <label class="field">
+              <span>你的問題</span>
+              <textarea
+                id="questionInput"
+                rows="5"
+                placeholder="例如：雇主要求平日加班 2 小時、休息日再加班 8 小時，工資該怎麼算？"
+              ></textarea>
+            </label>
+            <div class="button-row">
+              <button id="askBtn" class="primary" type="submit">送出問題</button>
+            </div>
+          </form>
+
+          <div class="answers-head">
+            <h3>回答紀錄</h3>
+            <p>每次回答都會附上目前檢索到的主要條文。</p>
+          </div>
+          <div id="answerHistory" class="answer-history empty-state">
+            尚未有回答。先輸入 API Key，建立索引後再提問。
+          </div>
+        </section>
+
+        <aside class="panel sources-panel">
+          <div class="panel-head">
+            <h2>本次來源條文</h2>
+            <p>顯示目前檢索分數最高的條文片段。</p>
+          </div>
+          <div id="sourceList" class="source-list empty-state">送出問題後會顯示來源條文。</div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
