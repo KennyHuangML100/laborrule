@@ -44,20 +44,23 @@
             />
           </label>
 
-          <div class="api-help">
-            <p class="field-hint">
-              前往
-              <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer">
-                Google AI Studio
-              </a>
-              取得 Gemini API Key。
-            </p>
-            <ul class="steps-list">
-              <li>登入 Google 帳號後，打開 AI Studio。</li>
-              <li>選擇 `Get API key` 或 `API keys`。</li>
-              <li>建立新的 API Key，複製後貼回這個欄位。</li>
-            </ul>
-          </div>
+          <details class="api-help">
+            <summary>如何取得 Gemini API Key</summary>
+            <div class="api-help-body">
+              <p class="field-hint">
+                前往
+                <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer">
+                  Google AI Studio
+                </a>
+                取得 Gemini API Key。
+              </p>
+              <ul class="steps-list">
+                <li>登入 Google 帳號後，打開 AI Studio。</li>
+                <li>選擇 `Get API key` 或 `API keys`。</li>
+                <li>建立新的 API Key，複製後貼回這個欄位。</li>
+              </ul>
+            </div>
+          </details>
 
           <div class="button-row button-row-tight">
             <button id="verifyApiKeyBtn" class="ghost" type="button">驗證 API Key</button>

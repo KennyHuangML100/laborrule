@@ -177,10 +177,39 @@ h3 {
 
 .api-help {
   margin: -4px 0 14px;
-  padding: 14px 16px;
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.58);
   border: 1px solid rgba(33, 68, 56, 0.09);
+}
+
+.api-help summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--forest);
+  list-style: none;
+}
+
+.api-help summary::-webkit-details-marker {
+  display: none;
+}
+
+.api-help summary::after {
+  content: "+";
+  margin-left: auto;
+  font-size: 1.1rem;
+  color: var(--accent-strong);
+}
+
+.api-help[open] summary::after {
+  content: "-";
+}
+
+.api-help-body {
+  padding: 0 16px 14px;
 }
 
 .api-help a {
